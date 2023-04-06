@@ -1,0 +1,36 @@
+pipeline{
+    agent any
+    
+    environment{
+        PATH = "/opt/maven3/bin:$PATH"
+    }
+    stages{
+        stage("Git Checkout"){
+            steps{
+                git credentialsId: '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', url: 'https://github.com/boorlasiva/webapp.git'
+            }
+        }
+        stage("Maven Build"){
+            steps{
+                sh "mvn clean package"
+                sh "mv target/*.war target/myweb.war"
+            }
+        }
+       
+        stage("deploy-dev"){
+            steps{
+                sshagent(['webapp']) {
+                sh """
+                    scp -o StrictHostKeyChecking=no target/myweb.war  ec2-user@172.31.0.96:/home/ec2-user/apache-tomcat-9.0.73/webapps/
+                    
+                    ssh ec2-user@172.31.0.96 /home/ec2-user/apache-tomcat-9.0.73/bin/shutdown.sh
+                    
+                    ssh ec2-user@172.31.0.96 /home/ec2-user/apache-tomcat-9.0.73/bin/startup.sh
+                
+                """
+            }
+            
+            }
+        }
+    }
+}
